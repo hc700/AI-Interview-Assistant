@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>AI 模拟面试助手 · 高保真可交互原型</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ==================== 全局共享组件 ==================== -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 生成中遮罩 -->
+<div class="gen-overlay" id="genOv">
+  <div class="spinner"></div>
+  <p id="genTx">AI 面试官正在进入房间…</p>
+  <small>正在为你还原真实面试环境</small>
+</div>
+
+<!-- 支付弹窗 -->
+<div class="mask" id="payMask">
+  <div class="modal modal-md">
+    <div class="modal-h">
+      <b>收银台 · 模拟支付</b>
+      <div class="modal-x" data-close="payMask">✕</div>
+    </div>
+    <div class="pay-order">
+      <span>购买</span><b id="payPlan">季度会员</b>
+      <span class="pay-price" id="payPrice">¥79</span>
+    </div>
+    <div class="pay-tabs">
+      <div class="pay-tab on" data-pay="wechat">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9.5 4C5.9 4 3 6.5 3 9.6c0 1.8 1 3.4 2.6 4.5L5 17l3.1-1.8c.5.1 1 .2 1.4.2h.3a4.6 4.6 0 0 1-.2-1.4c0-2.8 2.8-5 6.2-5h.3C15.7 6.1 12.9 4 9.5 4Z" fill="#07C160"/><path d="M21 14.2c0-2.4-2.5-4.3-5.5-4.3S10 11.8 10 14.2s2.5 4.3 5.5 4.3c.6 0 1.1-.1 1.6-.2L18.7 19l1.1-1.6c1.3-.8 1.2-1.8 1.2-3.2Z" fill="#07C160"/></svg>
+        微信支付
+      </div>
+      <div class="pay-tab" data-pay="alipay">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20.8 5.2A9.9 9.9 0 0 0 12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10c0-1.7-.4-3.2-1.2-4.8Z" fill="#1677FF" opacity=".12"/><path d="M18.6 12.7c-1-.4-2-.7-3-1l-.1.1c1.1-.4 2.3-1 2.9-1.7H14V8.5h4.3v.6h-4.3v1.9c1.7.3 3.6.9 5.3 1.7h-.7Z" fill="#1677FF"/><path d="M9.2 13.4c-1.6-.8-3-1.5-3-2.2 0-.6.6-1 1.5-1.2-.6-.3-1.5-.5-2.4-.5-2.6 0-4.3 1.5-4.3 3.4 0 1.9 1.6 3.1 4.5 4.1" transform="translate(3 2.5)" fill="#1677FF"/></svg>
+        支付宝
+      </div>
+    </div>
+    <div class="qr-zone">
+      <div class="qr-box" id="qrBox"></div>
+      <div class="qr-cap">请使用<b id="qrApp">微信</b>扫码支付 · 原型占位二维码</div>
+    </div>
+    <div class="pay-act">
+      <button class="btn btn-primary btn-block" style="height:44px;border-radius:8px;font-size:15px;" id="payOk">模拟支付成功</button>
+      <div class="modal-link" data-close="payMask">取消支付</div>
+    </div>
+  </div>
+</div>
+
+<!-- 改用文字作答弹窗 -->
+<div class="mask" id="txtMask">
+  <div class="modal modal-md">
+    <div class="modal-h"><b>改用文字作答</b><div class="modal-x" data-close="txtMask">✕</div></div>
+    <textarea class="tx-area" id="txtArea" placeholder="用文字输入你的回答（面试官会实时收到并继续追问）…"></textarea>
+    <div class="tx-foot">
+      <button class="btn btn-line-gray btn-md" data-close="txtMask">取消</button>
+      <button class="btn btn-primary btn-md" id="txtSend">发送回答</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 1：首页（落地页）
+================================================================= -->
+<div class="screen active" id="sc-home">
+  <div class="page">
+    <header class="site-nav">
+      <div class="nav-left">
+        <div class="logo">
+          <span class="logo-mark">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg>
+          </span>
+          <span class="logo-name">AI 模拟面试助手</span>
+        </div>
+        <nav class="nav-menu">
+          <span class="nav-it is-on" data-route="sc-home">首页</span>
+          <span class="nav-it" data-route="sc-conf">开始面试</span>
+          <span class="nav-it" data-route="sc-pricing">会员定价</span>
+          <span class="nav-it" data-route="sc-profile">个人中心</span>
+        </nav>
+      </div>
+      <div class="nav-right">
+        <button class="btn-login" id="loginBtn1">登录</button>
+        <div class="u-chip" id="uChip1">
+          <span class="avatar-ic"></span>
+          <span class="nm">张伟</span>
+          <span class="pro-badge" id="proBadge1">PRO</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-in">
+        <div class="hero-copy">
+          <span class="pill">🎯 技术岗求职者专属 · 免登录即可体验</span>
+          <h1 class="hero-h1">语音 · 编程 · 白板<br>还原一场真实的技术面试</h1>
+          <p class="hero-sub">AI 面试官模拟真实面试节奏与压力：语音对话深挖项目、在线编程限时解题、白板画图讲系统设计。面试结束即刻评分，帮你在 Offer 前把每道题练熟。</p>
+          <div class="hero-cta">
+            <button class="btn btn-primary btn-lg" data-route="sc-conf">免费开始模拟面试</button>
+            <button class="btn btn-ghost btn-lg" data-route="sc-pricing">查看会员权益</button>
+          </div>
+          <p class="hero-note">免注册 · 每月 3 场免费额度 · 无需安装任何插件</p>
+        </div>
+
+        <!-- 面试中示意卡片 -->
+        <div class="mock">
+          <div class="mock-head">
+            <span class="mock-title">AI 面试官 · 语音问答房间</span>
+            <span class="mock-rec"><i class="d"></i>REC 00:24</span>
+          </div>
+          <div class="qa-ai">
+            <span class="qa-tag">正在提问 · 八股</span>
+            <p class="qa-q">请讲讲 TCP 三次握手的过程，为什么不是两次握手？</p>
+            <p class="qa-meta">语音已播放 0:12 · 中等难度 · 追问就绪</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div class="wave" id="heroWave">
+              <i style="height:12px"></i><i style="height:26px"></i><i style="height:18px"></i><i style="height:32px"></i><i style="height:14px"></i><i style="height:28px"></i><i style="height:20px"></i><i style="height:34px"></i><i style="height:16px"></i><i style="height:24px"></i><i style="height:30px"></i><i style="height:12px"></i>
+            </div>
+            <span style="font-size:12px;color:#8A94B8;flex:none;">正在聆听你的回答…</span>
+          </div>
+          <div class="qa-user">
+            <p>“三次握手是为了确认双方的发送与接收能力。第一次客户端发 SYN… 第二次服务端回 SYN+ACK 后，服务端已确认自己能收能发，但客户端还没确认自己能发，所以还需要第三次握手。”</p>
+            <span>语音转写结束 · 已自动提交 · 0.8s</span>
+          </div>
+          <div class="mock-think">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span>AI 正在分析你的回答 · 准备追问</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" style="background:#fff;">
+      <div class="sec-head">
+        <h2 class="sec-t">三种实战交互，覆盖技术面试全题型</h2>
+        <p class="sec-s">从口述到写码再到画图，AI 面试官全程陪伴式提问与点评</p>
+      </div>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <div class="feat-ic"><span style="font-size:26px;">🎤</span></div>
+          <h3>语音问答</h3>
+          <p>模拟真实口试节奏，AI 针对你的回答即时追问、深挖细节，覆盖八股、项目经历与系统设计论述题，练表达、练临场。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-ic"><span style="font-size:26px;">💻</span></div>
+          <h3>在线编程</h3>
+          <p>内置在线代码编辑器与测试用例，算法题限时完成、一键运行，还原手撕代码的真实紧张感，提交后自动判题。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-ic"><span style="font-size:26px;">📐</span></div>
+          <h3>白板系统设计</h3>
+          <p>在点阵白板上拖拽架构图、边讲边画，AI 实时观察你的设计思路，针对缓存一致性、容灾扩容等问题层层追问。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec steps-sec">
+      <div class="sec-head">
+        <h2 class="sec-t">四步完成一场高质量模拟面试</h2>
+        <p class="sec-s">完整流程与真实面试一致，随时开始、立即得到反馈</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card"><div class="step-n">01</div><h4 class="step-t">配置面试</h4><p>选岗位、难度与时长，拖拽滑块定制题目构成，也可上传简历让 AI 针对性提问。</p></div>
+        <div class="step-card"><div class="step-n">02</div><h4 class="step-t">语音问答</h4><p>AI 面试官开口提问，你语音作答，追问环环相扣，还原口试压力。</p></div>
+        <div class="step-card"><div class="step-n">03</div><h4 class="step-t">编程 + 白板</h4><p>在线手撕算法题，再于白板上画架构、讲设计，多维度考察硬实力。</p></div>
+        <div class="step-card"><div class="step-n">04</div><h4 class="step-t">即时评分</h4><p>面试结束立刻出总分与整体评语，会员可解锁五维报告与逐题复盘。</p></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2 class="sec-t">免费版 vs 会员版</h2>
+        <p class="sec-s">先免费练起来，进阶后再解锁完整成长路径</p>
+      </div>
+      <div class="cmp-card">
+        <div class="cmp-row head">
+          <div class="cell head-lbl">功能对比</div>
+          <div class="cell head-lbl">免费版</div>
+          <div class="cell pro-col pro-head" style="font-weight:700;">会员版</div>
+        </div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">每月模拟场次</span></div><div class="cell free-txt">3 场</div><div class="cell pro-col pro-txt">不限次</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">面后反馈</span></div><div class="cell free-txt">总分 + 短评语</div><div class="cell pro-col pro-txt">五维报告 + 逐题复盘</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">语音 / 编程 / 白板</span></div><div class="cell free-txt">全部开放</div><div class="cell pro-col pro-txt">全部开放 + 更密追问</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">简历定制提问</span></div><div class="cell free-txt">仅内置题库</div><div class="cell pro-col pro-txt">上传简历 · 针对性提问</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">历史与成长曲线</span></div><div class="cell free-txt">仅保留本场</div><div class="cell pro-col pro-txt">长期保存 · 成长曲线</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">AI 改进建议</span></div><div class="cell free-txt">—</div><div class="cell pro-col pro-txt">可执行建议清单</div></div>
+      </div>
+      <div style="display:flex;justify-content:center;margin-top:28px;">
+        <button class="btn btn-primary btn-lg" data-route="sc-conf">立即开始第一场模拟面试</button>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="f-brand">
+        <div class="f-brand-row">
+          <span class="logo-mark">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg>
+          </span>
+          <span>AI 模拟面试助手</span>
+        </div>
+        <p class="f-slogan">用 AI 还原真实面试，把每一场练习都变成 Offer 前的底气。</p>
+      </div>
+      <div class="f-right">
+        <div class="f-links"><span data-route="sc-home" style="cursor:pointer;">首页</span><span data-route="sc-conf" style="cursor:pointer;">开始面试</span><span data-route="sc-pricing" style="cursor:pointer;">会员定价</span><span data-route="sc-profile" style="cursor:pointer;">个人中心</span></div>
+        <p class="f-note">© 2026 AI 模拟面试助手 · 原型演示环境 · 不构成任何真实服务承诺</p>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 2：面试配置页
+================================================================= -->
+<div class="screen" id="sc-conf">
+  <div class="page">
+    <header class="site-nav">
+      <div class="nav-left">
+        <div class="logo">
+          <span class="logo-mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span class="logo-name">AI 模拟面试助手</span>
+        </div>
+        <nav class="nav-menu">
+          <span class="nav-it" data-route="sc-home">首页</span>
+          <span class="nav-it is-on" data-route="sc-conf">开始面试</span>
+          <span class="nav-it" data-route="sc-pricing">会员定价</span>
+          <span class="nav-it" data-route="sc-profile">个人中心</span>
+        </nav>
+      </div>
+      <div class="nav-right">
+        <button class="btn-login" id="loginBtn2">登录</button>
+        <div class="u-chip" id="uChip2">
+          <span class="avatar-ic"></span>
+          <span class="nm">张伟</span>
+          <span class="pro-badge" id="proBadge2">PRO</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="conf-body">
+      <div class="quota">
+        <span class="quota-tx">🎟️ 本月免费额度剩余 <b id="quotaTx">1/3</b> 场</span>
+        <span class="quota-up" data-route="sc-pricing">开通会员，不限场次 →</span>
+      </div>
+
+      <div class="conf-row">
+        <!-- 左侧表单 -->
+        <div class="conf-left">
+          <div class="field">
+            <p class="f-label">① 目标岗位</p>
+            <div class="opts" id="jobOpts">
+              <button class="opt sel" data-job="后端开发工程师">后端</button>
+              <button class="opt" data-job="前端开发工程师">前端</button>
+              <button class="opt" data-job="算法工程师">算法</button>
+              <button class="opt" data-job="全栈开发工程师">全栈</button>
+              <button class="opt" data-job="测试开发工程师">测试</button>
+              <button class="opt" data-job="大数据开发工程师">数据</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <p class="f-label">② 难度级别</p>
+            <div class="opts" id="difOpts">
+              <button class="opt" data-dif="初级 · 0~2 年">初级 0~2 年</button>
+              <button class="opt sel" data-dif="中级 · 2~5 年">中级 2~5 年</button>
+              <button class="opt" data-dif="高级 · 5 年+">高级 5 年+</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <p class="f-label">③ 面试时长</p>
+            <div class="opts" id="durOpts">
+              <button class="opt" data-dur="30 分钟">30 分钟</button>
+              <button class="opt sel" data-dur="45 分钟">45 分钟</button>
+              <button class="opt" data-dur="60 分钟">60 分钟</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <p class="f-label">④ 题目构成 <span style="color:#C0C6D1;font-weight:400;">· 拖动滑块自定义</span></p>
+            <div class="mix-row">
+              <span class="mix-name">🎤 语音问答</span>
+              <input type="range" id="vNum" min="0" max="8" value="6">
+              <span class="mix-count" id="vNumTx">6 题</span>
+            </div>
+            <div class="mix-row">
+              <span class="mix-name">💻 在线编程</span>
+              <input type="range" id="cNum" min="0" max="3" value="2">
+              <span class="mix-count" id="cNumTx">2 题</span>
+            </div>
+            <div class="mix-row">
+              <span class="mix-name">📐 白板设计</span>
+              <input type="range" id="wNum" min="0" max="2" value="1">
+              <span class="mix-count" id="wNumTx">1 题</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <p class="f-label">⑤ 简历上传 <span style="color:#C0C6D1;font-weight:400;">可选 · 上传后 AI 将结合简历定制追问</span></p>
+            <div class="up-file" id="resumeRow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0-12L8 7m4-4 4 4M5 14v4a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-4" stroke="#3B5BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="fn" id="resumeName">张伟_后端开发_简历.pdf</span>
+              <span class="tag-ok">已解析</span>
+              <span class="up-desc">2.4 MB · 提取 18 项技能</span>
+              <button class="ctl-link" style="font-size:12px;" id="resumeSwap">更换</button>
+            </div>
+            <div class="up-drop" id="dropZone" style="display:none;">
+              <span>📄 拖拽 PDF 到此处，或点击上传（原型将自动解析）</span>
+              <input type="file" id="fileIn" accept=".pdf" style="display:none;">
+            </div>
+            <div class="note-strip" id="resumeNote" style="margin-top:10px;">✅ 解析完成：3 年 Go 后端 · 熟悉微服务 / 高并发 / Redis · 建议深挖「项目难点」与「线上故障处理」</div>
+          </div>
+        </div>
+
+        <!-- 右侧面试说明书 -->
+        <aside class="spec-card">
+          <h3>📋 面试说明书</h3>
+          <div class="spec-row"><span class="k">目标岗位</span><span class="v" id="specJob">后端开发工程师</span></div>
+          <div class="spec-row"><span class="k">难度级别</span><span class="v" id="specDif">中级 · 2~5 年</span></div>
+          <div class="spec-row"><span class="k">面试时长</span><span class="v" id="specDur">45 分钟</span></div>
+          <div class="spec-row"><span class="k">语音问答</span><span class="v" id="specV">6 题 · 约 18 分钟</span></div>
+          <div class="spec-row"><span class="k">在线编程</span><span class="v" id="specC">2 题 · 约 18 分钟</span></div>
+          <div class="spec-row"><span class="k">白板设计</span><span class="v" id="specW">1 题 · 约 8 分钟</span></div>
+          <div class="spec-row"><span class="k">预计用时</span><span class="v blue" id="specTime">约 44 分钟</span></div>
+          <button class="spec-cta" id="startBtn">确认，开始面试</button>
+          <p class="spec-note">开始后消耗 1 次免费额度，中途取消不退还</p>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 3：语音问答环节（面试房间 1/3）
+================================================================= -->
+<div class="screen" id="sc-voice">
+  <div class="page">
+    <div class="room-bar">
+      <div style="display:flex;align-items:center;min-width:0;">
+        <div class="rb-brand">
+          <span class="logo-mark" style="width:28px;height:28px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span>AI 模拟面试 · 后端开发工程师</span>
+          <i class="rb-live"></i>
+        </div>
+        <div class="rb-steps">
+          <div class="rb-step" data-room="0"><span class="rb-dot on">1</span><span class="rb-tx on">语音问答</span></div>
+          <div class="rb-step" data-room="1"><span class="rb-dot">2</span><span class="rb-tx">在线编程</span></div>
+          <div class="rb-step" data-room="2"><span class="rb-dot">3</span><span class="rb-tx">白板设计</span></div>
+          <div class="rb-step" data-room="3"><span class="rb-dot">4</span><span class="rb-tx">评分反馈</span></div>
+        </div>
+      </div>
+      <div class="rb-side">
+        <span class="rb-time">21:36</span>
+        <span class="rb-pause" id="pauseBtn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="1.5" width="3" height="9" rx="1" fill="#fff"/><rect x="7" y="1.5" width="3" height="9" rx="1" fill="#fff"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <div class="room-body">
+      <div class="ai-hint">
+        <span class="ai-badge">AI</span>
+        <p>接下来是<b>语音问答</b>环节。请直接开口回答；不方便开麦时，可点击「改用文字作答」。</p>
+      </div>
+
+      <div class="q-card">
+        <div class="q-main">
+          <p class="q-eyebrow">第 <b id="qIdx">1</b> / <span id="qTotal">6</span> 题 · 项目深挖 · 本题剩余时间 <span id="qTime" style="color:#F53F3F;">02:00</span></p>
+          <h2 class="q-title" id="qTitle">项目里用了本地缓存 + MQ 削峰：如果下游消费者重启导致消息大量堆积，你如何设计降级与恢复方案？</h2>
+        </div>
+        <span class="tag tag-grey" style="font-size:12px;">💬 请语音回答</span>
+      </div>
+
+      <div class="chat" id="chatBox">
+        <div class="bubble bubble-ai">
+          <p class="tx-meta">AI 面试官 · 语音 0:14</p>
+          <p style="font-weight:600;color:var(--t1);">先聊聊项目经历：请介绍一下你最近负责的、并发量最高的一个系统，你承担了什么角色？</p>
+        </div>
+        <div class="bubble bubble-user">
+          <p>“是上一家公司的积分发放服务，峰值 QPS 约 8 万。我负责整体架构与核心链路：前端接入层做了本地缓存 + Redis，写操作先走 MQ 削峰，由消费端批量落库……”</p>
+          <p class="tx-meta">我的回答 · 语音转写 00:42</p>
+        </div>
+        <div class="bubble bubble-ai">
+          <p class="tx-meta">AI 面试官 · 追问</p>
+          <span class="qa-tag" style="background:#FFF1E8;color:#FF7A45;">追问</span>
+          <p style="color:var(--t2);">你提到用本地缓存 + MQ 削峰。那如果下游消费者服务重启，消息大量堆积，你会如何设计降级与恢复方案？</p>
+        </div>
+      </div>
+
+      <div class="note-strip">ℹ️ 提示：网络中断 60 秒内自动恢复面试；白板与代码内容自动暂存，不会丢失。</div>
+    </div>
+
+    <!-- 底部语音控制条 -->
+    <div class="v-ctl" id="vCtl">
+      <div class="v-ctl-in">
+        <div class="mic-g" id="micG">
+          <button class="mic-btn" id="micBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <span class="rec-tx">正在聆听…</span>
+        </div>
+        <div class="wave" id="micWave" style="opacity:.55;">
+          <i style="height:10px"></i><i style="height:20px"></i><i style="height:32px"></i><i style="height:14px"></i><i style="height:26px"></i><i style="height:38px"></i><i style="height:18px"></i><i style="height:30px"></i><i style="height:12px"></i><i style="height:24px"></i><i style="height:36px"></i><i style="height:16px"></i><i style="height:28px"></i><i style="height:10px"></i>
+        </div>
+        <button class="ctl-btn" id="txtAnsBtn">改用文字作答</button>
+        <button class="ctl-btn" id="skipBtn">跳过本题</button>
+        <button class="ctl-link danger" id="endVoiceBtn">结束面试</button>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:16px;">
+          <span class="ctl-link" style="cursor:default;">第 2 / 6 题已就绪</span>
+          <button class="ctl-done" id="voiceNext">下一环节 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 4：在线编程环节（面试房间 2/3）
+================================================================= -->
+<div class="screen" id="sc-code">
+  <div class="page">
+    <div class="room-bar">
+      <div style="display:flex;align-items:center;min-width:0;">
+        <div class="rb-brand">
+          <span class="logo-mark" style="width:28px;height:28px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span>AI 模拟面试 · 后端开发工程师</span>
+          <i class="rb-live"></i>
+        </div>
+        <div class="rb-steps">
+          <div class="rb-step" data-room="0"><span class="rb-dot done">✓</span><span class="rb-tx done">语音问答</span></div>
+          <div class="rb-step" data-room="1"><span class="rb-dot on">2</span><span class="rb-tx on">在线编程</span></div>
+          <div class="rb-step" data-room="2"><span class="rb-dot">3</span><span class="rb-tx">白板设计</span></div>
+          <div class="rb-step" data-room="3"><span class="rb-dot">4</span><span class="rb-tx">评分反馈</span></div>
+        </div>
+      </div>
+      <div class="rb-side">
+        <span class="rb-time">16:02</span>
+        <span class="rb-pause"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="1.5" width="3" height="9" rx="1" fill="#fff"/><rect x="7" y="1.5" width="3" height="9" rx="1" fill="#fff"/></svg></span>
+      </div>
+    </div>
+
+    <div class="room-body">
+      <div class="ai-hint">
+        <span class="ai-badge">AI</span>
+        <p>进入<b>在线编程</b>环节。请先完成右侧代码并运行用例，随后向我口头讲解你的<b>思路与复杂度</b>。</p>
+      </div>
+
+      <div class="code-split">
+        <!-- 左侧题目面板 -->
+        <div class="prob-panel">
+          <div class="prob-title-row">
+            <h2 class="prob-title">206. 反转链表</h2>
+            <span class="mtag">中等</span>
+            <span class="mtag" style="background:var(--blue-bg);color:var(--blue);">链表</span>
+          </div>
+          <p class="prob-desc" style="color:#86909C;font-size:12px;">LeetCode Hot 100 · 公司：字节 / 腾讯 / 阿里</p>
+          <p class="prob-desc">给你单链表的头节点 head ，请你反转链表，并返回反转后的链表。要求：先给出迭代解法，再分析能否用递归实现。</p>
+          <hr class="hr">
+          <p class="prob-desc" style="color:var(--t1);font-weight:600;">示例</p>
+          <p class="prob-desc"><span class="mono" style="color:var(--t3);">输入：</span><span class="mono">head = [1,2,3,4,5]</span><br><span class="mono" style="color:var(--t3);">输出：</span><span class="mono">[5,4,3,2,1]</span></p>
+          <hr class="hr">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <p class="tc-ok" id="tcStatus">测试用例 0 / 3 通过</p>
+            <span class="sp" style="font-size:11px;color:#86909C;" id="runStamp">等待运行…</span>
+          </div>
+          <div class="tc"><span class="st st-ok" id="tcI1">○</span><span class="mono">[1,2,3,4,5]</span><span style="margin-left:auto;font-size:11px;color:#86909C;">→ [5,4,3,2,1]</span></div>
+          <div class="tc"><span class="st" id="tcI2">○</span><span class="mono">[]</span><span style="margin-left:auto;font-size:11px;color:#86909C;">→ []</span></div>
+          <div class="tc"><span class="st" id="tcI3">○</span><span class="mono">[1,2]</span><span style="margin-left:auto;font-size:11px;color:#86909C;">→ [2,1]</span></div>
+        </div>
+
+        <!-- 右侧代码编辑器 -->
+        <div class="editor">
+          <div class="ed-tabs">
+            <span class="ed-tab on">Solution.java</span>
+            <span class="ed-tab">Main.java</span>
+            <span class="ed-lang">Java 17 ▾</span>
+          </div>
+          <div class="code-area" id="codeArea">
+            <div class="gutter" id="gutter">
+              1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17
+            </div>
+            <div class="code-col">
+              <div class="cl"><span class="c-cmt">/**</span></div>
+              <div class="cl"><span class="c-cmt"> * Definition for singly-linked list.</span></div>
+              <div class="cl"><span class="c-cmt"> * public class ListNode { int val; ListNode next; }</span></div>
+              <div class="cl"><span class="c-cmt"> */</span></div>
+              <div class="cl"><span class="c-kw">class</span> <span class="c-plain" style="color:#6AD6C7;">Solution</span> {</div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">public</span> <span class="c-plain" style="color:#6AD6C7;">ListNode</span> <span style="color:#FAC761;">reverseList</span>(<span class="c-plain" style="color:#6AD6C7;">ListNode</span> head) {</div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-plain" style="color:#6AD6C7;">ListNode</span> prev = <span class="c-kw">null</span>; <span class="c-cmt">// 前驱指针</span></div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-plain" style="color:#6AD6C7;">ListNode</span> cur = head; <span class="c-cmt">// 当前指针</span></div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">while</span> (cur != <span class="c-kw">null</span>) {</div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-plain" style="color:#6AD6C7;">ListNode</span> nxt = cur.next; <span class="c-cmt">// 暂存后继</span></div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cur.next = prev; <span class="c-cmt">// 反转指针</span></div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prev = cur;</div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cur = nxt;</div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">return</span> prev;</div>
+              <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+              <div class="cl">}</div>
+            </div>
+          </div>
+          <div class="run-out" id="runOut">
+            <p class="ro-t">$ java Solution &lt; testcase.txt</p>
+            <pre id="runOutPre"></pre>
+          </div>
+          <div style="padding:0 24px 20px;">
+            <div class="op-bar">
+              <button class="btn-run" id="runBtn">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 1.5v9l8-4.5-8-4.5Z" fill="#3B5BFF"/></svg>
+                运行代码
+              </button>
+              <button class="btn-submit" id="submitBtn">提交并讲解思路</button>
+              <span class="sp">已自动暂存 12:03:44 · Ctrl+S 手动保存</span>
+              <button class="btn-next" id="codeNext" style="opacity:.5;pointer-events:none;">进入下一环节 →</button>
+            </div>
+            <p class="spec-note" id="codeNote" style="text-align:left;margin:10px 0 0;display:none;">✅ 提交成功（原型模拟）。回到语音对话后，请口头说明<b>迭代与递归</b>两种思路及时间复杂度 O(n)、空间 O(1)。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 5：白板设计环节（面试房间 3/3）
+================================================================= -->
+<div class="screen" id="sc-wb">
+  <div class="page">
+    <div class="room-bar">
+      <div style="display:flex;align-items:center;min-width:0;">
+        <div class="rb-brand">
+          <span class="logo-mark" style="width:28px;height:28px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span>AI 模拟面试 · 后端开发工程师</span>
+          <i class="rb-live"></i>
+        </div>
+        <div class="rb-steps">
+          <div class="rb-step" data-room="0"><span class="rb-dot done">✓</span><span class="rb-tx done">语音问答</span></div>
+          <div class="rb-step" data-room="1"><span class="rb-dot done">✓</span><span class="rb-tx done">在线编程</span></div>
+          <div class="rb-step" data-room="2"><span class="rb-dot on">3</span><span class="rb-tx on">白板设计</span></div>
+          <div class="rb-step" data-room="3"><span class="rb-dot">4</span><span class="rb-tx">评分反馈</span></div>
+        </div>
+      </div>
+      <div class="rb-side">
+        <span class="rb-time warn">04:36</span>
+        <span class="rb-pause"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="1.5" width="3" height="9" rx="1" fill="#fff"/><rect x="7" y="1.5" width="3" height="9" rx="1" fill="#fff"/></svg></span>
+      </div>
+    </div>
+
+    <div class="room-body">
+      <div class="q-card">
+        <div class="q-main">
+          <p class="q-eyebrow">第 1 / 1 题 · 系统设计 · 讲解计时 09:41</p>
+          <h2 class="q-title">请设计一个短链接服务（类似 bit.ly）。请在白板上画出架构，并说明存储选型、缓存策略与 301/302 的选择。</h2>
+        </div>
+        <span class="tag tag-grey" style="font-size:12px;">📐 边讲边画</span>
+      </div>
+
+      <div class="wb-head">
+        <h3 class="wb-title">短链接服务架构草图</h3>
+        <span class="tag tag-blue">已连接 AI 面试官</span>
+        <span class="tag tag-grey">实时同步中</span>
+      </div>
+
+      <div class="wb-main">
+        <!-- 工具栏 -->
+        <div class="tool-col">
+          <div class="tool on" data-tool="select" title="选择">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 8-6 1.5L10 18l-2-6L5 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="tool" data-tool="pen" title="画笔">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19l-4 1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="tool" data-tool="line" title="连线">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 19 19 5M5 19l2-5M19 5l-5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <div class="tool" data-tool="box" title="区域框">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/></svg>
+          </div>
+          <div style="width:32px;height:1px;background:var(--line);margin:4px 0;"></div>
+          <div class="tool" data-elem="🗄️" title="数据库" style="font-size:15px;">🗄️</div>
+          <div class="tool" data-elem="⚡" title="缓存" style="font-size:15px;">⚡</div>
+          <div class="tool" data-elem="📮" title="消息队列" style="font-size:15px;">📮</div>
+          <div class="tool" data-elem="🛣️" title="网关" style="font-size:15px;">🛣️</div>
+          <div class="tool" data-elem="🧩" title="微服务" style="font-size:15px;">🧩</div>
+          <div class="tool" data-elem="☁️" title="负载均衡" style="font-size:15px;">☁️</div>
+          <div style="width:32px;height:1px;background:var(--line);margin:4px 0;"></div>
+          <div class="tool" data-tool="del" title="删除">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+
+        <!-- 画布 -->
+        <div class="canvas-wrap" id="canvasWrap">
+          <div class="board-art" id="boardArt">
+            <svg class="edges-svg" id="edgesSvg" viewBox="0 0 700 380" preserveAspectRatio="none"></svg>
+            <div class="wb-node" data-id="user" style="left:64px;top:150px;">
+              <span class="em">🧑‍💻</span><span class="lb">用户<small class="role">· 浏览器 302</small></span>
+            </div>
+            <div class="wb-node" data-id="lb" style="left:232px;top:130px;">
+              <span class="em">☁️</span><span class="lb">负载均衡</span>
+            </div>
+            <div class="wb-node" data-id="gw" style="left:420px;top:120px;">
+              <span class="em">🛣️</span><span class="lb">API 网关<small class="role">· 鉴权/限流</small></span>
+            </div>
+            <div class="wb-node u-cache" data-id="cache" style="left:520px;top:250px;">
+              <span class="em">⚡</span><span class="lb">Redis 缓存<small class="role">· 短码→长链</small></span>
+            </div>
+            <div class="wb-node u-db" data-id="db" style="left:240px;top:280px;">
+              <span class="em">🗄️</span><span class="lb">MySQL 主库<small class="role">· 短码分片</small></span>
+            </div>
+          </div>
+          <p class="canvas-tip">双击空白处添加文本框（原型示意）</p>
+          <div class="wb-count" id="wbCount">元素 5 · 连线 6 · <b>✔ 已自动保存</b></div>
+        </div>
+
+        <!-- AI 观察面板 -->
+        <aside class="ai-panel">
+          <h4>🤖 AI 面试官观察</h4>
+          <div class="ai-status"><i class="d"></i>正在监听你的讲解 · 声纹正常</div>
+          <p class="obs">· 已识别关键词：短码、302、缓存、分库分表、布隆过滤器</p>
+          <p class="obs">· 架构完整度评分：<b style="color:#3B5BFF;">中上</b>（暂未计入总分）</p>
+          <p class="obs warn">⚠️ 追问 1：访问短链时缓存未命中，你会如何处理？如何保证缓存与数据库的一致性？</p>
+          <p class="obs warn">⚠️ 追问 2：短码的过期与清理策略？如何估算 1 亿条短链的存储容量？</p>
+          <div class="tip-box">💡 讲解要点：先讲清 301/302 语义与布隆过滤器防穿透，再补「缓存一致性 + 容量估算」，最后收尾到监控与降级。</div>
+          <button class="btn btn-primary btn-block" style="height:42px;border-radius:8px;font-size:14px;margin-top:2px;" id="wbFinish">完成讲解，结束面试</button>
+          <p class="spec-note" style="margin:4px 0 0;">点击后 AI 将生成整场评分报告</p>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 6：评分反馈页
+================================================================= -->
+<div class="screen" id="sc-score">
+  <div class="page">
+    <div class="room-bar">
+      <div style="display:flex;align-items:center;min-width:0;">
+        <div class="rb-brand">
+          <span class="logo-mark" style="width:28px;height:28px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span>AI 模拟面试 · 后端开发工程师</span>
+        </div>
+        <div class="rb-steps">
+          <div class="rb-step"><span class="rb-dot done">✓</span><span class="rb-tx done">语音问答</span></div>
+          <div class="rb-step"><span class="rb-dot done">✓</span><span class="rb-tx done">在线编程</span></div>
+          <div class="rb-step"><span class="rb-dot done">✓</span><span class="rb-tx done">白板设计</span></div>
+          <div class="rb-step"><span class="rb-dot on">4</span><span class="rb-tx on">评分反馈</span></div>
+        </div>
+      </div>
+      <div class="rb-side"><span class="rb-end">✓ 本场面试已结束</span></div>
+    </div>
+
+    <div class="report-body">
+      <div>
+        <h2 class="report-t">面试评分报告</h2>
+        <p class="report-sub">张伟 · 后端开发工程师 · 中级 2~5 年 · 2026-09-02 11:20 · 实际用时 41 分钟</p>
+      </div>
+
+      <!-- 顶部成绩卡 -->
+      <div class="sum-card">
+        <div class="ring-wrap">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle cx="80" cy="80" r="66" fill="none" stroke="#EEF0F5" stroke-width="12"/>
+            <circle id="ringArc" cx="80" cy="80" r="66" fill="none" stroke="#3B5BFF" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="414.7" stroke-dashoffset="414.7" transform="rotate(-90 80 80)"/>
+          </svg>
+          <div class="ring-num">82</div>
+          <div class="ring-lab">综合得分 / 100</div>
+        </div>
+        <div class="sum-mid">
+          <div class="stars-row">
+            <span id="starsRow">
+              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2Z" fill="#FFB400"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2Z" fill="#FFB400"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2Z" fill="#FFB400"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2Z" fill="#FFB400"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2Z" fill="#E5E8EF"/></svg>
+            </span>
+            <span class="stars-tx">4.1 / 5 · 评级：进阶</span>
+          </div>
+          <h4>整体评语</h4>
+          <p>整体表现良好：项目讲述有结构感，能清晰描述高并发场景下的个人贡献，优化前后的数据对比让人印象深刻；算法题一次通过，思路与复杂度分析到位；短板在系统设计——缓存一致性、容量估算等表述缺少数据支撑，追问时略慌乱。建议近期重点补分布式场景的纵深练习，先给结论、再展开细节。综合 82 分，属于「可进面大厂」水平，继续加油！</p>
+        </div>
+        <div class="sum-act">
+          <button class="btn btn-primary btn-lg" style="width:100%;" data-route="sc-conf">再练一场</button>
+          <button class="btn btn-line-gray btn-lg" style="width:100%;" id="shareBtn">分享成绩</button>
+          <p class="sum-quota" id="sumQuota">本月免费额度已用完 <b>3/3</b><br><a data-route="sc-pricing" style="cursor:pointer;">开通会员，不限场次 →</a></p>
+        </div>
+      </div>
+
+      <!-- 会员深度报告区（锁定态） -->
+      <div class="lock-zone" id="lockZone">
+        <!-- 五维评分卡 -->
+        <div class="tbl-card dim-card">
+          <h3>五维能力评分</h3>
+          <div class="dim-row"><span class="dim-nm">算法能力</span><div class="dim-bar"><i style="width:88%;"></i></div><span class="dim-sc">88</span></div>
+          <div class="dim-row"><span class="dim-nm">系统设计</span><div class="dim-bar"><i class="warn" style="width:62%;"></i></div><span class="dim-sc">62</span></div>
+          <div class="dim-row"><span class="dim-nm">表达能力</span><div class="dim-bar"><i style="width:90%;"></i></div><span class="dim-sc">90</span></div>
+          <div class="dim-row"><span class="dim-nm">代码质量</span><div class="dim-bar"><i style="width:85%;"></i></div><span class="dim-sc">85</span></div>
+          <div class="dim-row"><span class="dim-nm">项目深度</span><div class="dim-bar"><i style="width:78%;"></i></div><span class="dim-sc">78</span></div>
+        </div>
+
+        <!-- 逐题复盘表 -->
+        <div class="tbl-card">
+          <h3>逐题复盘（6 题）</h3>
+          <div class="t-row head">
+            <div class="t-cell t-head">题目</div>
+            <div class="t-cell t-head">得分</div>
+            <div class="t-cell t-head">用时</div>
+            <div class="t-cell t-head">AI 点评</div>
+          </div>
+          <div class="t-row"><div class="t-cell t-name">语音 · 项目深挖：介绍高并发系统与角色</div><div class="t-cell t-score">92</div><div class="t-cell t-time">03:48</div><div class="t-cell t-comment">逻辑清晰，优化前后数据对比有力</div></div>
+          <div class="t-row"><div class="t-cell t-name">语音 · 八股：HashMap 底层与扩容</div><div class="t-cell t-score">78</div><div class="t-cell t-time">02:15</div><div class="t-cell t-comment">要点正确，红黑树部分可再深入</div></div>
+          <div class="t-row"><div class="t-cell t-name">语音 · 追问：MQ 堆积的降级与恢复</div><div class="t-cell t-score">85</div><div class="t-cell t-time">03:02</div><div class="t-cell t-comment">方案完整，缺少故障演练数据</div></div>
+          <div class="t-row"><div class="t-cell t-name">编程 · 206 反转链表</div><div class="t-cell t-score">88</div><div class="t-cell t-time">12:40</div><div class="t-cell t-comment">迭代通过；递归与空间复杂度需主动说明</div></div>
+          <div class="t-row"><div class="t-cell t-name">白板 · 短链接服务架构</div><div class="t-cell t-score warn">62</div><div class="t-cell t-time">10:20</div><div class="t-cell t-comment">整体合理，容量估算与一致性方案偏弱</div></div>
+          <div class="t-row"><div class="t-cell t-name">白板 · 追问：缓存一致性</div><div class="t-cell t-score warn">60</div><div class="t-cell t-time">04:35</div><div class="t-cell t-comment">回答犹豫，建议补充 Cache-Aside 场景对比</div></div>
+        </div>
+
+        <!-- 遮罩 -->
+        <div class="lock-mask" id="lockMask">
+          <span class="lock-ic">🔒</span>
+          <p class="lock-t">会员深度报告已锁定</p>
+          <p class="lock-s">五维能力评分 + 逐题复盘 + 成长建议已为你生成。<br>开通会员即可解锁查看，并解锁每月不限次模拟面试。</p>
+          <div class="lock-btns">
+            <button class="btn-unlock" id="unlockBtn">立即解锁 ¥79/季</button>
+            <button class="btn btn-line-gray btn-md" data-route="sc-pricing">查看会员详情</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 环节回顾 -->
+      <div class="tbl-card">
+        <h3>环节回顾</h3>
+        <div class="t-row head">
+          <div class="t-cell t-head">环节</div>
+          <div class="t-cell t-head">内容</div>
+          <div class="t-cell t-head">用时</div>
+          <div class="t-cell t-head">完成状态</div>
+        </div>
+        <div class="t-row"><div class="t-cell t-name">语音问答</div><div class="t-cell t-time">项目深挖 · 八股 · 追问</div><div class="t-cell t-time">18:12</div><div class="t-cell t-comment" style="color:var(--green);font-weight:600;">已完成 6/6 题</div></div>
+        <div class="t-row"><div class="t-cell t-name">在线编程</div><div class="t-cell t-time">反转链表（中等）</div><div class="t-cell t-time">12:40</div><div class="t-cell t-comment" style="color:var(--green);font-weight:600;">通过 3/3 用例</div></div>
+        <div class="t-row"><div class="t-cell t-name">白板设计</div><div class="t-cell t-time">短链接服务</div><div class="t-cell t-time">10:20</div><div class="t-cell t-comment" style="color:var(--green);font-weight:600;">已讲解并保存</div></div>
+        <div style="display:flex;gap:24px;padding:14px 0 6px;">
+          <span class="ctl-link" style="cursor:pointer;" id="dlData">⬇ 下载面试数据（JSON）</span>
+          <span class="ctl-link danger" style="cursor:pointer;" id="delData">删除本场数据</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 7：会员定价页
+================================================================= -->
+<div class="screen" id="sc-pricing">
+  <div class="page">
+    <header class="site-nav">
+      <div class="nav-left">
+        <div class="logo">
+          <span class="logo-mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span class="logo-name">AI 模拟面试助手</span>
+        </div>
+        <nav class="nav-menu">
+          <span class="nav-it" data-route="sc-home">首页</span>
+          <span class="nav-it" data-route="sc-conf">开始面试</span>
+          <span class="nav-it is-on" data-route="sc-pricing">会员定价</span>
+          <span class="nav-it" data-route="sc-profile">个人中心</span>
+        </nav>
+      </div>
+      <div class="nav-right">
+        <button class="btn-login" id="loginBtn7">登录</button>
+        <div class="u-chip" id="uChip7">
+          <span class="avatar-ic"></span>
+          <span class="nm">张伟</span>
+          <span class="pro-badge" id="proBadge7">PRO</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="pricing-body">
+      <div>
+        <h2 class="pricing-t">会员定价 · 为你的 Offer 投资</h2>
+        <p class="pricing-sub">三档随心选，解锁不限次模拟面试与完整成长反馈，随时可取消。</p>
+      </div>
+
+      <div class="plans">
+        <div class="plan" data-plan="月度会员" data-price="¥39">
+          <h3 class="plan-name">月度会员</h3>
+          <div class="price-row"><span class="price-big">¥39</span><span class="price-per">/ 月</span></div>
+          <p class="plan-feat">· 不限次模拟面试
+· 完整五维评分报告
+· 逐题复盘与追问记录
+· 简历定制提问（3 份）
+· 面试历史与成长曲线
+· 随时取消订阅</p>
+          <button class="plan-cta" data-plan="月度会员" data-price="¥39">选择 月度会员</button>
+        </div>
+
+        <div class="plan hot" data-plan="季度会员" data-price="¥79">
+          <span class="hot-badge">🔥 季付最划算 · 省 33%</span>
+          <h3 class="plan-name">季度会员</h3>
+          <div class="price-row"><span class="price-big">¥79</span><span class="price-per">/ 季</span></div>
+          <p class="plan-feat">· 不限次模拟面试
+· 完整五维评分报告
+· 逐题复盘与追问记录
+· 简历定制提问（不限份）
+· 面试历史与成长曲线
+· 专属新题抢先体验</p>
+          <button class="plan-cta filled" data-plan="季度会员" data-price="¥79">选择 季度会员</button>
+        </div>
+
+        <div class="plan" data-plan="年度会员" data-price="¥199">
+          <h3 class="plan-name">年度会员</h3>
+          <div class="price-row"><span class="price-big">¥199</span><span class="price-per">/ 年</span></div>
+          <p class="plan-feat">· 不限次模拟面试
+· 完整五维评分报告
+· 逐题复盘与追问记录
+· 简历定制提问（不限份）
+· 面试历史与成长曲线
+· 求职冲刺课程包（价值 ¥99）</p>
+          <button class="plan-cta" data-plan="年度会员" data-price="¥199">选择 年度会员</button>
+        </div>
+      </div>
+
+      <!-- 完整权益对比 -->
+      <div class="cmp-card">
+        <div class="cmp-row head">
+          <div class="cell head-lbl">权益对比</div>
+          <div class="cell head-lbl">免费版</div>
+          <div class="cell pro-col pro-head" style="font-weight:700;">会员版</div>
+        </div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">每月模拟场次</span></div><div class="cell free-txt">3 场 / 月</div><div class="cell pro-col pro-txt">不限次</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">面后反馈</span></div><div class="cell free-txt">总分 + 短评语</div><div class="cell pro-col pro-txt">五维报告 + 逐题复盘 + 成长建议</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">语音 / 编程 / 白板</span></div><div class="cell free-txt">均可用</div><div class="cell pro-col pro-txt">均可用 · 追问密度更高</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">简历定制提问</span></div><div class="cell free-txt">仅内置题库</div><div class="cell pro-col pro-txt">上传简历 · 结合经历提问</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">历史与成长曲线</span></div><div class="cell free-txt">仅保留本场</div><div class="cell pro-col pro-txt">长期保存 · 曲线追踪</div></div>
+        <div class="cmp-row"><div class="cell"><span class="lbl">AI 改进建议</span></div><div class="cell free-txt">—</div><div class="cell pro-col pro-txt">可执行建议清单</div></div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="faq-card">
+        <h3>常见问题</h3>
+        <div>
+          <p class="faq-q">Q1：免费额度什么时候刷新？</p>
+          <p class="faq-a">自然月 1 日 0 点重置为 3 场。未使用的额度不结转，建议每周固定练 1 场保持手感。会员不限场次，不受刷新规则影响。</p>
+        </div>
+        <div>
+          <p class="faq-q">Q2：如何取消订阅？会扣费吗？</p>
+          <p class="faq-a">进入「个人中心 → 会员与订阅」点击取消自动续费即可，取消后当期权益保留至到期日，不会二次扣费。原型中所有支付均为模拟，不产生真实扣款。</p>
+        </div>
+        <div>
+          <p class="faq-q">Q3：上传的简历数据安全吗？</p>
+          <p class="faq-a">简历使用 AES-256 加密存储，仅用于生成定制面试问题；你随时可在个人中心删除简历，删除后系统立即清除相关数据，不用于任何其他用途。</p>
+        </div>
+      </div>
+
+      <p class="pricing-note">* 定价为原型示意，上线前将通过小流量实验确定最终价格。</p>
+    </div>
+
+    <footer class="site-footer">
+      <div class="f-brand">
+        <div class="f-brand-row">
+          <span class="logo-mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span>AI 模拟面试助手</span>
+        </div>
+        <p class="f-slogan">用 AI 还原真实面试，把每一场练习都变成 Offer 前的底气。</p>
+      </div>
+      <div class="f-right">
+        <p class="f-note">© 2026 AI 模拟面试助手 · 原型演示环境 · 不构成任何真实服务承诺</p>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ================================================================
+  页面 8：个人中心
+================================================================= -->
+<div class="screen" id="sc-profile">
+  <div class="page">
+    <header class="site-nav">
+      <div class="nav-left">
+        <div class="logo">
+          <span class="logo-mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#fff"/></svg></span>
+          <span class="logo-name">AI 模拟面试助手</span>
+        </div>
+        <nav class="nav-menu">
+          <span class="nav-it" data-route="sc-home">首页</span>
+          <span class="nav-it" data-route="sc-conf">开始面试</span>
+          <span class="nav-it" data-route="sc-pricing">会员定价</span>
+          <span class="nav-it is-on" data-route="sc-profile">个人中心</span>
+        </nav>
+      </div>
+      <div class="nav-right">
+        <button class="btn-login" id="loginBtn8">登录</button>
+        <div class="u-chip" id="uChip8">
+          <span class="avatar-ic"></span>
+          <span class="nm">张伟</span>
+          <span class="pro-badge" id="proBadge8">PRO</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="pro-body">
+      <!-- 左侧 -->
+      <aside class="sidebar">
+        <div class="user-card">
+          <span class="u-avatar">张</span>
+          <div class="u-info">
+            <div class="u-name">张伟 <span class="pro-badge" id="sideBadge">PRO</span></div>
+            <p class="u-email">138****6688 · zhangwei@mail.com</p>
+          </div>
+        </div>
+        <div class="menu-it on" data-menu="overview">📊 总览</div>
+        <div class="menu-it" data-menu="cv">📄 我的简历</div>
+        <div class="menu-it" data-menu="history">🕘 面试历史</div>
+        <div class="menu-it" data-menu="member">💎 会员与订阅</div>
+        <div class="menu-it" data-menu="account">⚙️ 账号设置</div>
+        <div style="margin-top:8px;padding:12px 12px 0;border-top:1px solid var(--line2);">
+          <div class="menu-it" style="color:#F53F3F;" id="logoutIt">退出登录</div>
+        </div>
+      </aside>
+
+      <!-- 右侧 -->
+      <div class="pro-main">
+        <!-- 总览 -->
+        <div class="pane on" id="pane-overview">
+          <div class="stat-row">
+            <div class="stat"><div class="stat-n blue">12</div><p class="stat-l">累计面试场次</p></div>
+            <div class="stat"><div class="stat-n green">78.5</div><p class="stat-l">平均综合得分</p></div>
+            <div class="stat"><div class="stat-n" id="quotaStat" style="color:#3B5BFF;">0 / 3</div><p class="stat-l">本月免费额度（场）· <a data-route="sc-pricing" style="color:#FF7A45;cursor:pointer;">升级不限次</a></p></div>
+          </div>
+
+          <div class="card">
+            <h3>成长曲线（近 12 场）</h3>
+            <svg width="100%" height="210" viewBox="0 0 720 210" preserveAspectRatio="none" style="display:block;">
+              <line x1="60" y1="10" x2="60" y2="170" stroke="#F0F1F5"/>
+              <line x1="60" y1="50" x2="700" y2="50" stroke="#F7F8FA"/>
+              <line x1="60" y1="90" x2="700" y2="90" stroke="#F7F8FA"/>
+              <line x1="60" y1="130" x2="700" y2="130" stroke="#F7F8FA"/>
+              <line x1="60" y1="170" x2="700" y2="170" stroke="#E5E8EF"/>
+              <polyline id="trendLine" fill="none" stroke="#3B5BFF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points=""/>
+              <g id="trendDots"></g>
+              <text x="10" y="174" font-size="10" fill="#A9B4D0">60</text>
+              <text x="10" y="134" font-size="10" fill="#A9B4D0">70</text>
+              <text x="10" y="94" font-size="10" fill="#A9B4D0">80</text>
+              <text x="10" y="54" font-size="10" fill="#A9B4D0">90</text>
+              <text x="60" y="195" font-size="10" fill="#A9B4D0">第 1 场</text>
+              <text x="620" y="195" font-size="10" fill="#A9B4D0">第 12 场</text>
+            </svg>
+            <p class="trend-note">最新一场 82 分（↑4），算法与表达稳定，系统设计仍需专项提升。</p>
+          </div>
+
+          <div class="card">
+            <h3>面试历史</h3>
+            <div class="hist-row head">
+              <div class="h-col h-head">时间</div>
+              <div class="h-col h-head">岗位 / 难度</div>
+              <div class="h-col h-head">得分</div>
+              <div class="h-col h-head">操作</div>
+            </div>
+            <div class="hist-row"><div class="h-col h-date">2026-09-02 11:20</div><div class="h-col h-job">后端开发 · 中级</div><div class="h-col h-score">82</div><div class="h-col h-op" data-history>查看报告</div></div>
+            <div class="hist-row"><div class="h-col h-date">2026-08-28 19:30</div><div class="h-col h-job">算法工程师 · 高级</div><div class="h-col h-score">74</div><div class="h-col h-op" data-history>查看报告</div></div>
+            <div class="hist-row"><div class="h-col h-date">2026-08-15 22:05</div><div class="h-col h-job">后端开发 · 初级</div><div class="h-col h-score warn">68</div><div class="h-col h-op" data-history>查看报告</div></div>
+          </div>
+        </div>
+
+        <!-- 我的简历 -->
+        <div class="pane" id="pane-cv">
+          <div class="card" style="gap:14px;">
+            <h3 style="margin-bottom:4px;">已上传简历</h3>
+            <div class="cv-file">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill="#EBEFFF"/><path d="M14 2v4h4" stroke="#3B5BFF" stroke-width="1.5"/><path d="M9 12h6M9 15.5h6" stroke="#3B5BFF" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <div class="cv-info">
+                <p class="cv-name">张伟_后端开发_简历.pdf</p>
+                <p class="cv-meta">2.4 MB · 上传于 2026-08-20 · AES-256 已加密 · 已解析 18 项技能</p>
+              </div>
+              <button class="btn btn-line-gray btn-sm" id="reparseBtn">重新解析</button>
+              <button class="btn btn-outline-red btn-sm" id="delCvBtn">删除</button>
+            </div>
+            <div class="cv-file">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill="#FFF1E8"/><path d="M14 2v4h4" stroke="#FF7A45" stroke-width="1.5"/><path d="M9 12h6M9 15.5h6" stroke="#FF7A45" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <div class="cv-info">
+                <p class="cv-name">项目作品集_附加材料.pdf</p>
+                <p class="cv-meta">6.1 MB · 上传于 2026-08-20 · 仅用于项目深挖提问</p>
+              </div>
+              <button class="btn btn-line-gray btn-sm">重新解析</button>
+              <button class="btn btn-outline-red btn-sm">删除</button>
+            </div>
+            <button class="cv-upload">＋ 上传新简历（PDF ≤ 10MB）</button>
+            <div class="note-strip" style="margin-top:4px;">🔐 隐私说明：简历仅用于生成定制面试问题，AES-256 加密存储；删除简历后系统立即清除全部相关数据。</div>
+          </div>
+        </div>
+
+        <!-- 面试历史 -->
+        <div class="pane" id="pane-history">
+          <div class="card">
+            <h3>全部面试历史</h3>
+            <div class="hist-row head">
+              <div class="h-col h-head">时间</div>
+              <div class="h-col h-head">岗位 / 难度</div>
+              <div class="h-col h-head">得分</div>
+              <div class="h-col h-head">操作</div>
+            </div>
+            <div class="hist-row"><div class="h-col h-date">2026-09-02 11:20</div><div class="h-col h-job">后端开发 · 中级（完整模拟）</div><div class="h-col h-score">82</div><div class="h-col h-op" data-history>查看报告</div></div>
+            <div class="hist-row"><div class="h-col h-date">2026-08-28 19:30</div><div class="h-col h-job">算法工程师 · 高级（完整模拟）</div><div class="h-col h-score">74</div><div class="h-col h-op" data-history>查看报告</div></div>
+            <div class="hist-row"><div class="h-col h-date">2026-08-15 22:05</div><div class="h-col h-job">后端开发 · 初级（语音问答）</div><div class="h-col h-score warn">68</div><div class="h-col h-op" data-history>查看报告</div></div>
+          </div>
+        </div>
+
+        <!-- 会员与订阅 -->
+        <div class="pane" id="pane-member">
+          <div class="card" id="memberCardFree" style="gap:10px;align-items:center;text-align:center;">
+            <h3>当前为免费版</h3>
+            <p class="trend-note" style="margin:0;">每月 3 场免费额度（本月已用 <b id="memberUsed">3</b>/3）。开通会员即可解锁不限次面试与完整深度报告。</p>
+            <button class="btn-unlock" style="margin-top:6px;" data-route="sc-pricing">升级会员 ¥39 起/月</button>
+          </div>
+          <div class="card" id="memberCardPro" style="display:none;gap:10px;">
+            <h3>当前订阅 · 季度会员</h3>
+            <div class="set-row" style="border:none;"><span class="set-k">到期时间</span><span class="set-v" id="memberExpire">2026-12-02</span></div>
+            <div class="set-row" style="border:none;"><span class="set-k">续费方式</span><span class="set-v">自动续费（微信支付）</span></div>
+            <div class="set-row" style="border:none;"><span class="set-k">权益状态</span><span class="set-v sub">不限次模拟面试 · 五维报告 · 简历定制提问 · 历史与成长曲线</span></div>
+            <div style="display:flex;gap:12px;margin-top:4px;">
+              <button class="btn btn-line-gray btn-md">管理自动续费</button>
+              <button class="btn btn-outline-red btn-md">取消订阅</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 账号设置 -->
+        <div class="pane" id="pane-account">
+          <div class="card">
+            <h3>账号设置</h3>
+            <div class="set-row"><span class="set-k">手机号</span><span class="set-v">138****6688 <span class="set-v sub">（已绑定）</span></span></div>
+            <div class="set-row"><span class="set-k">邮箱</span><span class="set-v">zhangwei@mail.com <span class="set-v sub">用于接收每周报告</span></span></div>
+            <div class="set-row"><span class="set-k">登录方式</span><span class="set-v">手机号 + 验证码 / 微信快捷登录</span></div>
+            <div class="set-row"><span class="set-k">隐私设置</span><span class="set-v sub">默认拒绝将面试录音用于模型训练，可在下方修改</span></div>
+            <div style="display:flex;gap:12px;margin-top:10px;">
+              <button class="btn btn-primary btn-md">保存设置</button>
+              <button class="btn btn-outline-red btn-md" id="delAccountBtn">注销账号</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
